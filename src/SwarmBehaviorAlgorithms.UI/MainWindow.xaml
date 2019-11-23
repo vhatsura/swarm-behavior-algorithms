@@ -21,7 +21,7 @@
             <Border BorderBrush="Black" BorderThickness="2">
                 <Canvas x:Name="CanvasControl" Width="500" Height="500" />
             </Border>
-            <Grid Grid.Column="1">
+            <Grid Grid.Column="1" Margin="5">
                 <Grid.RowDefinitions>
                     <RowDefinition />
                     <RowDefinition />
@@ -94,16 +94,14 @@
                                 DataClick="Arrangement_OnDataClick">
                 <lvc:CartesianChart.Resources>
                     <Style TargetType="lvc:DefaultTooltip">
-                        <Setter Property="Background" Value="DarkOrange"></Setter>
-                        <Setter Property="Foreground" Value="White"></Setter>
+                        <Setter Property="Background" Value="DarkOrange" />
+                        <Setter Property="Foreground" Value="White" />
                         <Setter Property="ShowTitle" Value="False" />
                         <Setter Property="ShowSeries" Value="False" />
-                        <Setter Property="FontSize" Value="12"></Setter>
-                        <Setter Property="FontWeight" Value="Bold"></Setter>
-                        <Setter Property="CornerRadius" Value="20"></Setter>
-                        <Setter Property="Width" Value="40"></Setter>
-                        <Setter Property="Height" Value="40"></Setter>
-                        <Setter Property="BorderThickness" Value="0"></Setter>
+                        <Setter Property="FontSize" Value="12" />
+                        <Setter Property="FontWeight" Value="Bold" />
+                        <Setter Property="CornerRadius" Value="16" />
+                        <Setter Property="BorderThickness" Value="0" />
                     </Style>
                 </lvc:CartesianChart.Resources>
                 <lvc:CartesianChart.AxisX>

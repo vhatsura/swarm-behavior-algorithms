@@ -13,5 +13,7 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 3.0.100
+    - name: Checkout submodules
+      uses: textbook/git-checkout-submodule-action@2.0.0
     - name: Build with dotnet
       run: dotnet build --configuration Release

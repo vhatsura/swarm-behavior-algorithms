@@ -203,44 +203,7 @@ namespace SwarmBehaviorAlgorithms.UI
         {
             _resourcesResult.Clear();
 
-            for (var run = 0; run < NumberOfRuns; run++)
-            {
-                CleanupCargosAndTargets();
-
-                var numberOfRobots = GetRandomNumber(NumberOfCargos, NumberOfCargos + 10);
-                var robots = GenerateRobots(numberOfRobots);
-
-                int i;
-                for (i = 0; i < TimeLimit; i++)
-                {
-                    for (var j = 0; j < NumberOfMoves; j++)
-                    {
-                        // Move robots
-                        foreach (var robot in robots)
-                            // Move single robot
-                            MoveRobot(robot);
-
-                        if (j == 0)
-                        {
-                            foreach (var robot in robots)
-                            {
-                                robot.IsStopped = false;
-                                robot.Direction = new Direction(GetRandomNumber(-1, 1), GetRandomNumber(-1, 1));
-                            }
-
-                            h++;
-                        }
-                    }
-
-                    if (_targets.All(t => t.IsDelivered))
-                    {
-                        _resourcesResult.Add((robots, i));
-                        break;
-                    }
-                }
-
-                if (i == 500) _resourcesResult.Add((robots, 500));
-            }
+            Assess(() => GetRandomNumber(NumberOfCargos, NumberOfCargos + 10), TimeLimit, _resourcesResult);
 
             var moves = _resourcesResult.Sum(x => x.Cycles);
             var average = moves / _resourcesResult.Count;
@@ -252,47 +215,52 @@ namespace SwarmBehaviorAlgorithms.UI
             });
         }
 
-        private void ArrangementAssess()
+        private void Assess(Func<int> numberOfRobotsFunc, int timeLimit, IList<(List<Robot> Robots, int Cycle)> results)
         {
-            _arrangementResult.Clear();
-
             for (var run = 0; run < NumberOfRuns; run++)
             {
                 CleanupCargosAndTargets();
 
-                var robots = GenerateRobots(NumberOfCargos);
+                var robots = GenerateRobots(numberOfRobotsFunc());
 
                 int i;
-                for (i = 0; i < 500; i++)
+                for (i = 0; i < timeLimit; i++)
                 {
-                    for (var j = 0; j < NumberOfMoves; j++)
-                    {
-                        // Move robots
-                        foreach (var robot in robots)
-                            // Move single robot
-                            MoveRobot(robot);
-
-                        if (j == 0)
-                        {
-                            foreach (var robot in robots)
-                            {
-                                robot.IsStopped = false;
-                                robot.Direction = new Direction(GetRandomNumber(-1, 1), GetRandomNumber(-1, 1));
-                            }
-
-                            h++;
-                        }
-                    }
+                    for (var j = 0; j < NumberOfMoves; j++) MoveRobots(robots, j == 0);
 
                     if (_targets.All(t => t.IsDelivered))
                     {
-                        _arrangementResult.Add((robots, i));
+                        results.Add((robots, i));
                         break;
                     }
                 }
 
-                if (i == 500) _arrangementResult.Add((robots, 500));
+                if (i == 500) results.Add((robots, 500));
             }
+        }
+
+        private void MoveRobots(List<Robot> robots, bool isNewCycle)
+        {
+            // Move robots
+            foreach (var robot in robots) MoveRobot(robot);
+
+            if (isNewCycle)
+            {
+                foreach (var robot in robots)
+                {
+                    robot.IsStopped = false;
+                    robot.Direction = new Direction(GetRandomNumber(-1, 1), GetRandomNumber(-1, 1));
+                }
+
+                h++;
+            }
+        }
+
+        private void ArrangementAssess()
+        {
+            _arrangementResult.Clear();
+
+            Assess(() => NumberOfCargos, 500, _arrangementResult);
 
             var moves = _arrangementResult.Sum(x => x.Cycles);
             var average = moves / _arrangementResult.Count;

@@ -6,8 +6,14 @@
                       xmlns:Controls="http://metro.mahapps.com/winfx/xaml/controls"
                       xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
                       xmlns:local="clr-namespace:SwarmBehaviorAlgorithms.UI"
+                      xmlns:converters="clr-namespace:SwarmBehaviorAlgorithms.UI.Converters"
+                      xmlns:models="clr-namespace:SwarmBehaviorAlgorithms.UI.Models"
+                      xmlns:extensions="clr-namespace:SwarmBehaviorAlgorithms.UI.Extensions"
                       mc:Ignorable="d"
                       Title="Алгоритмы Роевого Построения" Height="1000" Width="1600">
+    <Controls:MetroWindow.Resources>
+        <converters:EnumNamesToStringsConverter x:Key="EnumToStringConverter" />
+    </Controls:MetroWindow.Resources>
     <Grid Margin="25">
         <Grid.RowDefinitions>
             <RowDefinition Height="2*" />
@@ -34,34 +40,30 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Label Content="Количество агентов и грузов" />
-                        <Controls:NumericUpDown Grid.Column="1" MinWidth="150" Value="{Binding NumberOfCargos}" />
-                    </Grid>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Выберите алгоритм поиска" />
+                        <Controls:SplitButton
+                            ItemsSource="{Binding Source={extensions:EnumBindingSource {x:Type models:SearchType}}}"
+                            SelectedItem="{Binding SearchType}" SelectionChanged="SearchType_OnSelectionChanged">
+                            <Controls:SplitButton.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource EnumToStringConverter}}" />
+                                </DataTemplate>
+                            </Controls:SplitButton.ItemTemplate>
+                        </Controls:SplitButton>
+                    </StackPanel>
                     <StackPanel Grid.Row="1" Orientation="Horizontal">
+                        <Label Content="Количество агентов и грузов" />
+                        <Controls:NumericUpDown MinWidth="150" Value="{Binding NumberOfCargos}" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="2" Orientation="Horizontal">
                         <Label Content="Количество ходов в одном цикле" />
                         <Controls:NumericUpDown MinWidth="150" Value="{Binding NumberOfMoves}" />
                     </StackPanel>
-                    <Grid Grid.Row="2">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Label Content="Количество шагов в ходе" />
-                        <Controls:NumericUpDown Grid.Column="1" MinWidth="150" Value="1" />
-                    </Grid>
-                    <Grid Grid.Row="3">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Row="3" Orientation="Horizontal">
                         <Label Content="Задержка анимации" />
-                        <Controls:NumericUpDown Grid.Column="1" MinWidth="150" Value="1" />
-                    </Grid>
+                        <Controls:NumericUpDown MinWidth="150" Value="{Binding AnimationDelay}" />
+                    </StackPanel>
                     <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Stretch">
                         <Label Content="Временной предел" />
                         <Controls:NumericUpDown MinWidth="150" Value="{Binding TimeLimit}" HorizontalAlignment="Right" />
@@ -71,9 +73,13 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <Button Content="Добавить грузы" Click="AddCargo_OnClick" />
-                    <Button Grid.Row="1" Content="Оценить расстановки и по ресурсам" Click="Assess_OnClick" />
+                    <Button x:Name="AddCargoesWithTargetsButton" Content="Добавить грузы и точки доставки" />
+                    <Button x:Name="AssessButton" Grid.Row="1" Content="Оценить расстановки и по ресурсам"
+                            IsEnabled="{Binding CanRunAssess}" />
+                    <Button Grid.Row="2" Content="Запустить симуляцию" Click="RunSimulation_OnClick"
+                            IsEnabled="{Binding CanRunSimulation}" />
                 </Grid>
             </Grid>
         </Grid>
@@ -83,15 +89,27 @@
                 <ColumnDefinition />
             </Grid.ColumnDefinitions>
             <lvc:CartesianChart Series="{Binding ArrangementSeriesCollection}" DataClick="Arrangement_OnDataClick">
+                <lvc:CartesianChart.Resources>
+                    <Style TargetType="lvc:DefaultTooltip">
+                        <Setter Property="Background" Value="DarkOrange" />
+                        <Setter Property="Foreground" Value="White" />
+                        <Setter Property="ShowTitle" Value="False" />
+                        <Setter Property="ShowSeries" Value="False" />
+                        <Setter Property="FontSize" Value="12" />
+                        <Setter Property="FontWeight" Value="Bold" />
+                        <Setter Property="CornerRadius" Value="16" />
+                        <Setter Property="BorderThickness" Value="0" />
+                    </Style>
+                </lvc:CartesianChart.Resources>
                 <lvc:CartesianChart.AxisX>
                     <lvc:Axis MinValue="0" MaxValue="100" />
                 </lvc:CartesianChart.AxisX>
                 <lvc:CartesianChart.AxisY>
-                    <lvc:Axis MinValue="1" MaxValue="500" />
+                    <lvc:Axis MinValue="1" MaxValue="2600" />
                 </lvc:CartesianChart.AxisY>
             </lvc:CartesianChart>
             <lvc:CartesianChart Grid.Column="1" Series="{Binding ResourceSeriesCollection}"
-                                DataClick="Arrangement_OnDataClick">
+                                DataClick="Resource_OnDataClick">
                 <lvc:CartesianChart.Resources>
                     <Style TargetType="lvc:DefaultTooltip">
                         <Setter Property="Background" Value="DarkOrange" />

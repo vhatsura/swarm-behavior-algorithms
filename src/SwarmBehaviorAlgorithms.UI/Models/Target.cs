@@ -1,6 +1,6 @@
 namespace SwarmBehaviorAlgorithms.UI.Models
 {
-    public class Target : IPosition
+    public class Target : ITarget
     {
         public Target(int number, Position position)
         {

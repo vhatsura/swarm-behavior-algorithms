@@ -1,4 +1,7 @@
-﻿using System.Windows;
+﻿using System.Reflection;
+using System.Windows;
+using ReactiveUI;
+using Splat;
 
 namespace SwarmBehaviorAlgorithms.UI
 {
@@ -7,5 +10,9 @@ namespace SwarmBehaviorAlgorithms.UI
     /// </summary>
     public partial class App : Application
     {
+        public App()
+        {
+            Locator.CurrentMutable.RegisterViewsForViewModels(Assembly.GetCallingAssembly());
+        }
     }
 }

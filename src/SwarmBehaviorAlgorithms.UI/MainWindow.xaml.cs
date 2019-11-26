@@ -1,133 +1,90 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using LiveCharts;
-using LiveCharts.Configurations;
-using LiveCharts.Wpf;
 using MahApps.Metro.Controls;
-using SwarmBehaviorAlgorithms.UI.Annotations;
+using ReactiveUI;
 using SwarmBehaviorAlgorithms.UI.Models;
-using Position = SwarmBehaviorAlgorithms.UI.Models.Position;
+using SwarmBehaviorAlgorithms.UI.ViewModels;
 
 namespace SwarmBehaviorAlgorithms.UI
 {
     /// <summary>
     ///     Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : MetroWindow, INotifyPropertyChanged
+    public partial class MainWindow : MetroWindow, IViewFor<AppViewModel>
     {
         private const int FieldSize = 500;
 
-        private const int NumberOfRuns = 100;
-
         private static readonly Random Random = new Random((int) DateTime.UtcNow.Ticks);
-
-        private readonly List<(List<Robot> Robots, int Cycles)> _arrangementResult =
-            new List<(List<Robot> Robots, int Cycles)>();
-
-        private readonly List<(List<Robot> Robots, int Cycles)> _resourcesResult =
-            new List<(List<Robot> Robots, int Cycles)>();
-
-        private List<Cargo> _cargos;
-
-        private int _numberOfCargos = 8;
-
-        private int _numberOfMoves = 10;
-
-        private int _numberOfSteps = 1;
-        private List<Robot> _robots;
-        private List<Target> _targets;
-
-        private int _timeLimit = 500;
-
-        private int h;
 
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = this;
-        }
 
-        public SeriesCollection ArrangementSeriesCollection { get; } =
-            new SeriesCollection(Mappers.Xy<int>().X((value, idx) => idx).Y(value => value));
+            ViewModel = new AppViewModel();
+            DataContext = ViewModel;
 
-
-        public SeriesCollection ResourceSeriesCollection { get; } =
-            new SeriesCollection(Mappers.Xy<int>().X((value, idx) => idx).Y(value => value));
-
-        public int NumberOfCargos
-        {
-            get => _numberOfCargos;
-            set
+            this.WhenActivated(disposableRegistration =>
             {
-                _numberOfCargos = value;
-                OnPropertyChanged();
-            }
-        }
+                this.BindCommand(ViewModel, vm => vm.AssessCommand, v => v.AssessButton)
+                    .DisposeWith(disposableRegistration);
 
-        public int NumberOfMoves
-        {
-            get => _numberOfMoves;
-            set
-            {
-                _numberOfMoves = value;
-                OnPropertyChanged();
-            }
-        }
+                this.BindCommand(ViewModel, vm => vm.GenerateCargoesWithTargets, v => v.AddCargoesWithTargetsButton)
+                    .DisposeWith(disposableRegistration);
 
-        public int NumberOfSteps
-        {
-            get => _numberOfSteps;
-            set
-            {
-                _numberOfSteps = value;
-                OnPropertyChanged();
-            }
-        }
+                ViewModel.WhenAnyValue(x => x.Cargoes, x => x.Targets)
+                    .Where((items) => items.Item1 != null && items.Item2 != null)
+                    .Subscribe((items) =>
+                    {
+                        CanvasControl.Children.Clear();
+                        foreach (var cargo in items.Item1) DrawCargo(cargo);
 
-        public int TimeLimit
-        {
-            get => _timeLimit;
-            set
-            {
-                _timeLimit = value;
-                OnPropertyChanged();
-            }
+                        foreach (var target in items.Item2) DrawTarget(target);
+                    });
+            });
         }
-
-        public event PropertyChangedEventHandler PropertyChanged;
 
         private static int GetRandomNumber(int minimum = 0, int maximum = FieldSize) =>
             Random.Next(minimum, maximum + 1);
 
-        private void AddCargo_OnClick(object sender, RoutedEventArgs e)
+        private bool _isRun;
+
+        private async void RunSimulation_OnClick(object sender, RoutedEventArgs e)
         {
-            _robots = new List<Robot>();
-            _cargos = new List<Cargo>();
-            _targets = new List<Target>();
+            await Task.Yield();
 
-            CanvasControl.Children.Clear();
+            _isRun = true;
+            var delay = TimeSpan.FromMilliseconds(ViewModel.AnimationDelay);
 
-            for (var i = 0; i < NumberOfCargos; i++)
+            CleanupCargosAndTargets();
+            foreach (var cargo in ViewModel.Cargoes)
             {
-                var target = new Target(i + 1, new Position(GetRandomNumber(), GetRandomNumber()));
-
-                var newCargo = new Cargo(i + 1, new Position(GetRandomNumber(), GetRandomNumber()), target);
-
-                _targets.Add(target);
-                _cargos.Add(newCargo);
+                cargo.IsAssigned = true;
             }
 
-            foreach (var cargo in _cargos) DrawCargo(cargo);
+            for (var i = 0; i < 5000; i++)
+            {
+                if (ViewModel.Targets.All(x => x.IsDelivered) || !_isRun)
+                {
+                    return;
+                }
 
-            foreach (var target in _targets) DrawTarget(target);
+                await Task.Delay(delay);
+
+                for (var j = 0; j < ViewModel.NumberOfMoves; j++)
+                {
+                    ViewModel.MoveRobots(ViewModel.Robots, j == ViewModel.NumberOfMoves - 1);
+                    Dispatcher?.Invoke(() => ReDrawAllObjects());
+                }
+            }
         }
 
         private void DrawCargo(Cargo cargo)
@@ -150,7 +107,7 @@ namespace SwarmBehaviorAlgorithms.UI
             var textBlock = new TextBlock
             {
                 Text = cargo.Number.ToString(),
-                Foreground = Brushes.White,
+                Foreground = cargo.IsTaken ? Brushes.Black : Brushes.White,
                 FontSize = 12
             };
 
@@ -159,6 +116,35 @@ namespace SwarmBehaviorAlgorithms.UI
 
             CanvasControl.Children.Add(triangle);
             CanvasControl.Children.Add(textBlock);
+        }
+
+        private void DrawRobots(IEnumerable<Robot> robots)
+        {
+            foreach (var robot in robots)
+            {
+                var circle = new Ellipse
+                {
+                    Width = 16,
+                    Height = 16,
+                    Fill = Brushes.Orange
+                };
+
+                Canvas.SetLeft(circle, robot.Position.X - 8);
+                Canvas.SetTop(circle, robot.Position.Y - 8);
+
+                var textBlock = new TextBlock
+                {
+                    Text = robot.TargetId.ToString(),
+                    Foreground = Brushes.White,
+                    FontSize = 10
+                };
+
+                Canvas.SetLeft(textBlock, robot.Position.X);
+                Canvas.SetTop(textBlock, robot.Position.Y - 8);
+
+                CanvasControl.Children.Add(circle);
+                CanvasControl.Children.Add(textBlock);
+            }
         }
 
         private void DrawTarget(Target target)
@@ -192,189 +178,71 @@ namespace SwarmBehaviorAlgorithms.UI
             CanvasControl.Children.Add(square);
             CanvasControl.Children.Add(textBlock);
         }
-
-        private void Assess_OnClick(object sender, RoutedEventArgs e)
-        {
-            ArrangementAssess();
-            ResourcesAsses();
-        }
-
-        private void ResourcesAsses()
-        {
-            _resourcesResult.Clear();
-
-            Assess(() => GetRandomNumber(NumberOfCargos, NumberOfCargos + 10), TimeLimit, _resourcesResult);
-
-            var moves = _resourcesResult.Sum(x => x.Cycles);
-            var average = moves / _resourcesResult.Count;
-
-            ResourceSeriesCollection.Clear();
-            ResourceSeriesCollection.Add(new LineSeries
-            {
-                Values = new ChartValues<int>(_resourcesResult.Select(x => x.Robots.Count))
-            });
-        }
-
-        private void Assess(Func<int> numberOfRobotsFunc, int timeLimit, IList<(List<Robot> Robots, int Cycle)> results)
-        {
-            for (var run = 0; run < NumberOfRuns; run++)
-            {
-                CleanupCargosAndTargets();
-
-                var robots = GenerateRobots(numberOfRobotsFunc());
-
-                int i;
-                for (i = 0; i < timeLimit; i++)
-                {
-                    for (var j = 0; j < NumberOfMoves; j++) MoveRobots(robots, j == 0);
-
-                    if (_targets.All(t => t.IsDelivered))
-                    {
-                        results.Add((robots, i));
-                        break;
-                    }
-                }
-
-                if (i == 500) results.Add((robots, 500));
-            }
-        }
-
-        private void MoveRobots(List<Robot> robots, bool isNewCycle)
-        {
-            // Move robots
-            foreach (var robot in robots) MoveRobot(robot);
-
-            if (isNewCycle)
-            {
-                foreach (var robot in robots)
-                {
-                    robot.IsStopped = false;
-                    robot.Direction = new Direction(GetRandomNumber(-1, 1), GetRandomNumber(-1, 1));
-                }
-
-                h++;
-            }
-        }
-
-        private void ArrangementAssess()
-        {
-            _arrangementResult.Clear();
-
-            Assess(() => NumberOfCargos, 500, _arrangementResult);
-
-            var moves = _arrangementResult.Sum(x => x.Cycles);
-            var average = moves / _arrangementResult.Count;
-
-            ArrangementSeriesCollection.Clear();
-            ArrangementSeriesCollection.Add(new LineSeries
-            {
-                Values = new ChartValues<int>(_arrangementResult.Select(x => x.Cycles))
-            });
-        }
-
+        
         private void CleanupCargosAndTargets()
         {
-            foreach (var cargo in _cargos)
+            foreach (var cargo in ViewModel.Cargoes)
             {
                 cargo.IsAssigned = false;
                 cargo.IsTaken = false;
             }
 
-            foreach (var target in _targets) target.IsDelivered = false;
-        }
-
-        private List<Robot> GenerateRobots(int amount)
-        {
-            var robots = new List<Robot>();
-            for (var i = 0; i < amount; i++)
-            {
-                var robot = new Robot(new Position(GetRandomNumber(), GetRandomNumber()),
-                    new Direction(GetRandomNumber(-1, 1), GetRandomNumber(-1, 1)));
-                robots.Add(robot);
-
-                var cargoToAssign = GetRandomNumber(0, NumberOfCargos - 1);
-                var cargoCounter = 0;
-
-                while (_cargos[cargoToAssign].IsAssigned && cargoCounter < NumberOfCargos)
-                {
-                    cargoToAssign = (cargoToAssign + 1) % NumberOfCargos;
-                    cargoCounter++;
-                }
-
-                robot.Target = _cargos[cargoToAssign];
-                _cargos[cargoToAssign].IsAssigned = true;
-            }
-
-            if (_cargos.Any(c => !c.IsAssigned))
-            {
-                if (Debugger.IsAttached) Debugger.Break();
-                throw new InvalidOperationException("Not all cargos were assigned");
-            }
-
-            if (robots.Any(r => r.Target == null))
-            {
-                if (Debugger.IsAttached) Debugger.Break();
-                throw new InvalidOperationException("Not all robots have target");
-            }
-
-            return robots;
-        }
-
-        private void MoveRobot(Robot robot)
-        {
-            if (robot.IsStopped || robot.JobIsDone) return;
-
-            var lastDist = robot.Distance;
-
-            // если робот на текущем шаге не выходит за границы имитационного поля
-            // по оси x или, если он уже за его пределами, не уходит ещё дальше
-            if (robot.Position.X < FieldSize && robot.Position.X > 0 ||
-                robot.Position.X >= FieldSize && robot.Direction.X != 1 ||
-                robot.Position.X <= 0 && robot.Direction.X != -1)
-                // делаем один шаг по оси x в установленном направлении
-                robot.Position.X += NumberOfSteps * robot.Direction.X;
-
-            // если робот на текущем шаге не выходит за границы имитационного поля
-            // по оси y или, если он уже за его пределами, не уходит ещё дальше
-            if (robot.Position.Y < FieldSize && robot.Position.Y > 0 ||
-                robot.Position.Y >= FieldSize && robot.Direction.Y != 1 ||
-                robot.Position.Y <= 0 && robot.Direction.Y != -1)
-                // делаем один шаг по оси y в установленном направлении
-                robot.Position.Y += NumberOfSteps * robot.Direction.Y;
-
-            // если рассточние до цели увеличилось, останавливаем движение робота на текущем шаге имитации
-            if (lastDist < robot.Distance) robot.IsStopped = true;
-
-            // проверка на то, что робот достиг назначенной цели 
-            if (Math.Abs(robot.Position.X - robot.Target.Position.X) < 10 &&
-                Math.Abs(robot.Position.Y - robot.Target.Position.Y) < 10)
-            {
-                // если робот достиг груза, назаничить ему в качестве цели,
-                // целевую точку, к которой был привязан данный груз
-                if (robot.Target is Cargo cargo && cargo.IsTaken == false)
-                {
-                    cargo.IsTaken = true;
-                    robot.Target = cargo.Target;
-                }
-                else if (robot.Target is Target target)
-                {
-                    // если достигнутая цель - целевая точка, остановить робота и 
-                    // считать его работу выполненной
-                    target.IsDelivered = true;
-                    robot.JobIsDone = true;
-                }
-            }
-        }
-
-        [NotifyPropertyChangedInvocator]
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            foreach (var target in ViewModel.Targets) target.IsDelivered = false;
         }
 
         private void Arrangement_OnDataClick(object sender, ChartPoint chartPoint)
         {
-            var arrangementIdx = chartPoint.X;
+            _isRun = false;
+            ViewModel.Robots = ViewModel.ArrangementsResult[(int) chartPoint.X].Robots;
+            CleanupCargosAndTargets();
+            ReDrawAllObjects();
+        }
+
+        private void Resource_OnDataClick(object sender, ChartPoint chartPoint)
+        {
+            _isRun = false;
+
+            ViewModel.Robots = ViewModel.ResourcesResult[(int) chartPoint.X].Robots;
+            CleanupCargosAndTargets();
+            ReDrawAllObjects();
+        }
+
+        private void ReDrawAllObjects()
+        {
+            CanvasControl.Children.Clear();
+
+            foreach (var cargo in ViewModel.Cargoes) DrawCargo(cargo);
+
+            foreach (var target in ViewModel.Targets) DrawTarget(target);
+            DrawRobots(ViewModel.Robots);
+        }
+
+        private void SearchType_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (ViewModel.Robots != null && ViewModel.Robots.Any()) ViewModel.Robots = new List<Robot>();
+
+            CleanupCargosAndTargets();
+            ReDrawAllObjects();
+        }
+
+        /// <summary>The view model dependency property.</summary>
+        public static readonly DependencyProperty ViewModelProperty = DependencyProperty.Register(nameof(ViewModel),
+            typeof(AppViewModel), typeof(MainWindow), new PropertyMetadata(null));
+
+        /// <summary>Gets the binding root view model.</summary>
+        public AppViewModel BindingRoot => ViewModel;
+
+        /// <inheritdoc />
+        public AppViewModel ViewModel
+        {
+            get => (AppViewModel) GetValue(ViewModelProperty);
+            set => SetValue(ViewModelProperty, value);
+        }
+
+        object IViewFor.ViewModel
+        {
+            get => ViewModel;
+            set => ViewModel = (AppViewModel) value;
         }
     }
 }

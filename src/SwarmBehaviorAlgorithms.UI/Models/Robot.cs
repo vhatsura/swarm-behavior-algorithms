@@ -16,10 +16,8 @@ namespace SwarmBehaviorAlgorithms.UI.Models
         public bool IsStopped { get; set; }
         public bool JobIsDone { get; set; }
 
-        public IPosition Target { get; set; }
-        //public int CargoNumber => Target.Number;
-
-        public double Weight { get; set; }
+        public ITarget Target { get; set; }
+        public int TargetId => Target.Number;
 
         public double Distance => Target == null
             ? double.NaN

@@ -21,10 +21,6 @@ namespace SwarmBehaviorAlgorithms.UI
     /// </summary>
     public partial class MainWindow : MetroWindow, IViewFor<AppViewModel>
     {
-        private const int FieldSize = 500;
-
-        private static readonly Random Random = new Random((int) DateTime.UtcNow.Ticks);
-
         public MainWindow()
         {
             InitializeComponent();
@@ -52,14 +48,13 @@ namespace SwarmBehaviorAlgorithms.UI
             });
         }
 
-        private static int GetRandomNumber(int minimum = 0, int maximum = FieldSize) =>
-            Random.Next(minimum, maximum + 1);
-
         private bool _isRun;
 
         private async void RunSimulation_OnClick(object sender, RoutedEventArgs e)
         {
             await Task.Yield();
+
+            ViewModel.ActualNumberOfIterations = 0;
 
             _isRun = true;
             var delay = TimeSpan.FromMilliseconds(ViewModel.AnimationDelay);
@@ -76,6 +71,8 @@ namespace SwarmBehaviorAlgorithms.UI
                 {
                     return;
                 }
+
+                ViewModel.ActualNumberOfIterations++;
 
                 await Task.Delay(delay);
 
@@ -178,7 +175,7 @@ namespace SwarmBehaviorAlgorithms.UI
             CanvasControl.Children.Add(square);
             CanvasControl.Children.Add(textBlock);
         }
-        
+
         private void CleanupCargosAndTargets()
         {
             foreach (var cargo in ViewModel.Cargoes)
@@ -193,7 +190,15 @@ namespace SwarmBehaviorAlgorithms.UI
         private void Arrangement_OnDataClick(object sender, ChartPoint chartPoint)
         {
             _isRun = false;
-            ViewModel.Robots = ViewModel.ArrangementsResult[(int) chartPoint.X].Robots;
+            ViewModel.Robots = ViewModel.ArrangementsResult[(int) chartPoint.X].Robots.Select(x =>
+                    new Robot(new Models.Position(x.Position.X, x.Position.Y),
+                        new Direction(x.Direction.X, x.Direction.Y))
+                    {
+                        IsStopped = false,
+                        JobIsDone = false,
+                        Target = x.Target
+                    })
+                .ToList();
             CleanupCargosAndTargets();
             ReDrawAllObjects();
         }

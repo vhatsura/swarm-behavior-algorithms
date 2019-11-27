@@ -40,6 +40,9 @@ namespace SwarmBehaviorAlgorithms.UI.ViewModels
         [Reactive]
         public List<Target> Targets { get; private set; } = new List<Target>();
 
+        [Reactive]
+        public int ActualNumberOfIterations { get; set; }
+
         public extern bool CanRunSimulation { [ObservableAsProperty] get; }
 
         public extern bool CanRunAssess { [ObservableAsProperty] get; }
@@ -47,9 +50,6 @@ namespace SwarmBehaviorAlgorithms.UI.ViewModels
         // todo: we don't want to store view dependencies in ViewModel. So, it will be refactored
         public extern SeriesCollection ArrangementSeriesCollection { [ObservableAsProperty] get; }
         public extern SeriesCollection ResourceSeriesCollection { [ObservableAsProperty] get; }
-
-        //public SeriesCollection ArrangementSeriesCollection { get; } =
-        //    new SeriesCollection(Mappers.Xy<int>().X((value, idx) => idx).Y(value => value));
 
         public extern IList<(List<Robot> Robots, int Cycles)> ArrangementsResult { [ObservableAsProperty] get; }
 
@@ -124,7 +124,6 @@ namespace SwarmBehaviorAlgorithms.UI.ViewModels
                 AssessArrangementCommand, AssessResourcesCommand
             });
 
-
             GenerateCargoesWithTargets = ReactiveCommand.Create(() =>
             {
                 var cargoes = new List<Cargo>();
@@ -143,6 +142,7 @@ namespace SwarmBehaviorAlgorithms.UI.ViewModels
                 Robots = new List<Robot>();
                 Cargoes = cargoes;
                 Targets = targets;
+                ActualNumberOfIterations = 0;
             });
         }
 
@@ -254,7 +254,7 @@ namespace SwarmBehaviorAlgorithms.UI.ViewModels
             return robots;
         }
 
-        private static int GetRandomNumber(int minimum = 0, int maximum = FieldSize) =>
+        public static int GetRandomNumber(int minimum = 0, int maximum = FieldSize) =>
             Random.Next(minimum, maximum + 1);
 
         public const int FieldSize = 500;

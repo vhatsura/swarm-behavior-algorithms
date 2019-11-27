@@ -17,6 +17,9 @@ namespace SwarmBehaviorAlgorithms.UI.Models
         public bool JobIsDone { get; set; }
 
         public ITarget Target { get; set; }
+
+        public double Weight { get; set; } = 0.5;
+        
         public int TargetId => Target.Number;
 
         public double Distance => Target == null

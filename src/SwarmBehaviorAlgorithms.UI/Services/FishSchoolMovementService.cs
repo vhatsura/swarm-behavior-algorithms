@@ -42,14 +42,15 @@ namespace SwarmBehaviorAlgorithms.UI.Services
                 robot.Position.Y = lastPosY;
                 robot.Position.X = lastPosX;
 
-                //robot.isStopped = true;
+                robot.IsStopped = true;
             }
             else
             {
                 //необходимо закрепить успех в индивидуальной стадии плавания.
-                //robot.weight += (robot.Distance - lastDist) / Math.Abs(robot.Distance - lastDist);
+                robot.Weight += (robot.Distance - lastDist) / Math.Abs(robot.Distance - lastDist);
 
-                //После этого рыбы совершают следующую стадию плавания — инстинктивно - коллективную.Для всего косяка рыб высчитывается величина «Общий шаг миграции»: 
+                //После этого рыбы совершают следующую стадию плавания — инстинктивно - коллективную.
+                //Для всего косяка рыб высчитывается величина «Общий шаг миграции»: 
                 robot.Position.Y += robot.Position.Y - lastPosY;
                 robot.Position.X += robot.Position.X - lastPosX;
             }

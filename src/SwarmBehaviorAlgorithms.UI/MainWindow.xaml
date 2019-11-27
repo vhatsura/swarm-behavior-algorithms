@@ -13,6 +13,7 @@
                       Title="Алгоритмы Роевого Построения" Height="1000" Width="1600">
     <Controls:MetroWindow.Resources>
         <converters:EnumNamesToStringsConverter x:Key="EnumToStringConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </Controls:MetroWindow.Resources>
     <Grid Margin="25">
         <Grid.RowDefinitions>
@@ -29,6 +30,7 @@
             </Border>
             <Grid Grid.Column="1" Margin="5">
                 <Grid.RowDefinitions>
+                    <RowDefinition />
                     <RowDefinition />
                     <RowDefinition />
                 </Grid.RowDefinitions>
@@ -81,54 +83,69 @@
                     <Button Grid.Row="2" Content="Запустить симуляцию" Click="RunSimulation_OnClick"
                             IsEnabled="{Binding CanRunSimulation}" />
                 </Grid>
+                <StackPanel Grid.Row="2" Orientation="Horizontal">
+                    <TextBlock Text="Количество итераций симуляции: " FontSize="24" />
+                    <TextBlock Text="{Binding ActualNumberOfIterations}" FontSize="24" />
+                </StackPanel>
             </Grid>
         </Grid>
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="1" Margin="25">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition />
                 <ColumnDefinition />
             </Grid.ColumnDefinitions>
-            <lvc:CartesianChart Series="{Binding ArrangementSeriesCollection}" DataClick="Arrangement_OnDataClick">
-                <lvc:CartesianChart.Resources>
-                    <Style TargetType="lvc:DefaultTooltip">
-                        <Setter Property="Background" Value="DarkOrange" />
-                        <Setter Property="Foreground" Value="White" />
-                        <Setter Property="ShowTitle" Value="False" />
-                        <Setter Property="ShowSeries" Value="False" />
-                        <Setter Property="FontSize" Value="12" />
-                        <Setter Property="FontWeight" Value="Bold" />
-                        <Setter Property="CornerRadius" Value="16" />
-                        <Setter Property="BorderThickness" Value="0" />
-                    </Style>
-                </lvc:CartesianChart.Resources>
-                <lvc:CartesianChart.AxisX>
-                    <lvc:Axis MinValue="0" MaxValue="100" />
-                </lvc:CartesianChart.AxisX>
-                <lvc:CartesianChart.AxisY>
-                    <lvc:Axis MinValue="1" MaxValue="2600" />
-                </lvc:CartesianChart.AxisY>
-            </lvc:CartesianChart>
-            <lvc:CartesianChart Grid.Column="1" Series="{Binding ResourceSeriesCollection}"
-                                DataClick="Resource_OnDataClick">
-                <lvc:CartesianChart.Resources>
-                    <Style TargetType="lvc:DefaultTooltip">
-                        <Setter Property="Background" Value="DarkOrange" />
-                        <Setter Property="Foreground" Value="White" />
-                        <Setter Property="ShowTitle" Value="False" />
-                        <Setter Property="ShowSeries" Value="False" />
-                        <Setter Property="FontSize" Value="12" />
-                        <Setter Property="FontWeight" Value="Bold" />
-                        <Setter Property="CornerRadius" Value="16" />
-                        <Setter Property="BorderThickness" Value="0" />
-                    </Style>
-                </lvc:CartesianChart.Resources>
-                <lvc:CartesianChart.AxisX>
-                    <lvc:Axis MinValue="0" MaxValue="100" />
-                </lvc:CartesianChart.AxisX>
-                <lvc:CartesianChart.AxisY>
-                    <lvc:Axis MinValue="1" MaxValue="25" />
-                </lvc:CartesianChart.AxisY>
-            </lvc:CartesianChart>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="График оценки расстановок" TextAlignment="Center" FontSize="18"/>
+                <lvc:CartesianChart Grid.Row="1" Series="{Binding ArrangementSeriesCollection}" DataClick="Arrangement_OnDataClick">
+                    <lvc:CartesianChart.Resources>
+                        <Style TargetType="lvc:DefaultTooltip">
+                            <Setter Property="Background" Value="DarkOrange" />
+                            <Setter Property="Foreground" Value="White" />
+                            <Setter Property="ShowTitle" Value="False" />
+                            <Setter Property="ShowSeries" Value="False" />
+                            <Setter Property="FontSize" Value="12" />
+                            <Setter Property="FontWeight" Value="Bold" />
+                            <Setter Property="CornerRadius" Value="16" />
+                            <Setter Property="BorderThickness" Value="0" />
+                        </Style>
+                    </lvc:CartesianChart.Resources>
+                    <lvc:CartesianChart.AxisX>
+                        <lvc:Axis MinValue="0" MaxValue="100" />
+                    </lvc:CartesianChart.AxisX>
+                </lvc:CartesianChart>
+            </Grid>
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="График оценки по ресурсам" TextAlignment="Center" FontSize="18"/>
+                <lvc:CartesianChart Grid.Row="1" Series="{Binding ResourceSeriesCollection}"
+                                    DataClick="Resource_OnDataClick">
+                    <lvc:CartesianChart.Resources>
+                        <Style TargetType="lvc:DefaultTooltip">
+                            <Setter Property="Background" Value="DarkOrange" />
+                            <Setter Property="Foreground" Value="White" />
+                            <Setter Property="ShowTitle" Value="False" />
+                            <Setter Property="ShowSeries" Value="False" />
+                            <Setter Property="FontSize" Value="12" />
+                            <Setter Property="FontWeight" Value="Bold" />
+                            <Setter Property="CornerRadius" Value="16" />
+                            <Setter Property="BorderThickness" Value="0" />
+                        </Style>
+                    </lvc:CartesianChart.Resources>
+                    <lvc:CartesianChart.AxisX>
+                        <lvc:Axis MinValue="0" MaxValue="100" />
+                    </lvc:CartesianChart.AxisX>
+                    <lvc:CartesianChart.AxisY>
+                        <lvc:Axis MinValue="1" MaxValue="25" />
+                    </lvc:CartesianChart.AxisY>
+                </lvc:CartesianChart>
+            </Grid>
         </Grid>
     </Grid>
 </Controls:MetroWindow>
